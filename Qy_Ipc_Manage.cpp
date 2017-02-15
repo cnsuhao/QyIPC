@@ -62,7 +62,22 @@ namespace Qy_IPC
 
 	Qy_Ipc_Manage::~Qy_Ipc_Manage(void)
 	{
-		this->m_bExit=true;
+		Stop();
+	}
+	void Qy_Ipc_Manage::Stop()
+	{
+		
+		if(m_nIsStart>0)
+		{
+			m_bExit=true;
+			DWORD dwWait = WaitForMultipleObjects(  2,
+				m_ThreadHandles,      // array of event objects   
+				TRUE,        // does not wait for all   
+				INFINITE); 
+			printf("Exit");
+			m_nIsStart=0;
+		}
+	   
 		if(m_QyIpcType==QyIpcServer)
 		{
 			for(size_t i=0;i<m_IPC_Vect.size();i++)
@@ -87,19 +102,9 @@ namespace Qy_IPC
 			::CloseHandle(m_ClientQy_IPC_Context.hDataEvent);
 			 m_ClientQy_IPC_Context.hDataEvent=INVALID_HANDLE_VALUE;
 		}
-		if(m_nIsStart>0)
-		{
-			m_bExit=true;
-			DWORD dwWait = WaitForMultipleObjects(  2,
-				m_ThreadHandles,      // array of event objects   
-				TRUE,        // does not wait for all   
-				INFINITE); 
-			printf("Exit");
-			int i=0;
-			i++;
-		}
+		
+		
 	}
-	
 	int Qy_Ipc_Manage::Init(IQy_HandelReceiveData* pReceiveData,EQyIpcType m_QyIpcType,IQy_IPC_DisConnect *pDisConnect)
 	{
 		m_pDisConnect=pDisConnect;
@@ -114,14 +119,15 @@ namespace Qy_IPC
 		return 1;
 	}
 	
-	bool Qy_Ipc_Manage::CreatePipe(std::string name,unsigned int PipeInstanceCount)
+	bool Qy_Ipc_Manage::CreatePipe(std::string PipeName,unsigned char ClientMaxCount)
 	{
 		if(m_QyIpcType==QyIpcServer)
 		{
+			size_t PipeInstanceCount=ClientMaxCount;
 			for(size_t i=0;i<PipeInstanceCount;i++)
 			{
 				Qy_Ipc_Win *Ipc = new Qy_Ipc_Win();
-				if(!Ipc->CreatePipe(name))
+				if(!Ipc->CreatePipe(PipeName))
 				{
 					return false;
 				}
@@ -421,10 +427,7 @@ namespace Qy_IPC
 		 m_ThreadHandles[0]=(HANDLE)_beginthreadex(NULL, NULL, QyIpcManage, (LPVOID)this, 0,&addrr);
 		 m_ThreadHandles[1]=(HANDLE)_beginthreadex(NULL, NULL, QyIpcHeartRate, (LPVOID)this, 0,&addrr);
 	}
-    void Qy_Ipc_Manage::WriteIpcHeartRate()
-    {
-		
-    }
+    
 	void Qy_Ipc_Manage:: ReadWritePipe()
 	{
 		DWORD  cbRet;  
@@ -432,7 +435,7 @@ namespace Qy_IPC
 		memset(pBuf,0,PipeBufferSize);
 		BOOL	fSuccess=FALSE;
 		int Index=0;
-		while(1)
+		while(!m_bExit)
 		{
 			if(m_QyIpcType==QyIpcServer)
 			{
@@ -447,6 +450,11 @@ namespace Qy_IPC
 						printf("Index out of range.\n");  
 						break;
 					} 
+					if(m_bExit)
+					{
+						break;
+					}
+
 					Index=i/3;
 					if(i%3==0)
 					{

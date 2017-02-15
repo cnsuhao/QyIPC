@@ -89,7 +89,7 @@ namespace Qy_IPC
 		delete pInstance;
 		pInstance=NULL;
 	}
-	bool CQy_IPC_PMan::StartProcess(std::string &ExeFile, std::string &CmdLine)
+	bool CQy_IPC_PMan::StartApp(std::string &ExeFile, std::string &CmdLine)
 	{
 		SProcessInfo *pInfo=(SProcessInfo*)::malloc(sizeof(SProcessInfo));
         memset(pInfo,0,sizeof(SProcessInfo));
@@ -107,23 +107,6 @@ namespace Qy_IPC
 		G_ProcessInfoMap.insert(std::pair<std::string,SProcessInfo*>(ExeFile,pInfo));
 	    return true;
 	}
-
-	void CQy_IPC_PMan::WriteData(std::string &ExeFile,char* pBuf,int Len)
-	{
-		/*std::string ffff=ExeFile;
-		Qy_Ipc_Manage *pInstcen=Qy_Ipc_Manage::GetInstance();
-		std::map<std::string,HANDLE>::iterator It=m_ExePipeMap.find(ffff);
-		if(It!=m_ExePipeMap.end())
-		{
-             pInstcen->WritePipe(pBuf,Len,It->second);
-		}*/
-		
-	}
-	void CQy_IPC_PMan::SetExeInfo(std::string &ExeFile,HANDLE Pipe)
-	{
-		m_ExePipeMap.insert(std::pair<std::string,HANDLE>(ExeFile,Pipe));
-	}
-
 	char exchange(char c)
 	{
 
@@ -140,12 +123,7 @@ namespace Qy_IPC
 	}
 	BOOL CQy_IPC_PMan::CloseApp(std::string ExeFile)
 	{
-		Qy_Ipc_Manage *pInstcen=NULL;//Qy_Ipc_Manage::GetInstance();
-		std::map<std::string,HANDLE>::iterator It=m_ExePipeMap.find(ExeFile);
-		if(It!=m_ExePipeMap.end())
-		{
-			m_ExePipeMap.erase(It);
-		}
+		
 
 		std::map<std::string,SProcessInfo*>::iterator Itx=G_ProcessInfoMap.begin();
 		for(;Itx!=G_ProcessInfoMap.end();++Itx)

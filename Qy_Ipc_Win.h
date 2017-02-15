@@ -1,9 +1,9 @@
-#pragma once
+#ifndef Qy_Ipc_Win_H_
+#define Qy_Ipc_Win_H_
+//windows ¹ÜµÀ
 #include <string>
 #include "Qy_IPC_Context.h"
 #include "IQy_Ipc_Base.h"
-#ifndef Qy_Ipc_Win_H_
-#define Qy_Ipc_Win_H_
 namespace Qy_IPC
 {
 	class Qy_Ipc_Win:public IQy_Ipc_Base
