@@ -1,18 +1,61 @@
-#include "Qy_Ipc_Manage.h"
 #include <Windows.h>
+#include "Qy_Ipc_Manage.h"
+#include "Qy_IPC_Context.h"
 #include "Qy_Ipc_Win.h"
 #include <process.h>
 #include <assert.h>
 namespace Qy_IPC
 {
-	Qy_Ipc_Manage* Qy_Ipc_Manage::m_Instance=NULL;
-	void  CALLBACK QyTimerHandle(HWND h, UINT uMsg, UINT_PTR idEvent,DWORD dwTime)
+
+	struct SReceiveData
 	{
-           Qy_Ipc_Manage *pIpc=(Qy_Ipc_Manage *)idEvent;
-		   int i=0;
-		   i++;
+		int DataLen;
+		char *Buf;
+		int PktId;
+	};
+	struct SReceiveCacheInfo
+	{
+		GUID Guid;
+		int TotalLen;
+		int CurLen;
+		//管道句柄
+		HANDLE hPipeInst;
+		std::vector<SReceiveData *>* pDataList;
+	};
+
+	
+	Qy_IPc_InterCriSec::Qy_IPc_InterCriSec(DWORD dwSpinCount)
+	{
+		::InitializeCriticalSectionAndSpinCount(&m_crisec, dwSpinCount);
 	}
+	Qy_IPc_InterCriSec::~Qy_IPc_InterCriSec()
+	{
+		::DeleteCriticalSection(&m_crisec);
+	}
+    void Qy_IPc_InterCriSec::Lock()
+	{
+		::EnterCriticalSection(&m_crisec);
+	}
+	void Qy_IPc_InterCriSec::Unlock()
+	{
+		::LeaveCriticalSection(&m_crisec);
+	}
+	BOOL Qy_IPc_InterCriSec::TryLock()
+	{
+		return ::TryEnterCriticalSection(&m_crisec);
+	}
+	DWORD Qy_IPc_InterCriSec::SetSpinCount(DWORD dwSpinCount) 
+	{
+		return ::SetCriticalSectionSpinCount(&m_crisec, dwSpinCount);
+	}
+    CRITICAL_SECTION* Qy_IPc_InterCriSec::GetObject()
+	{
+		return &m_crisec;
+	}
+
 	Qy_Ipc_Manage::Qy_Ipc_Manage():m_pDisConnect(NULL)
+		,m_nIsStart(0)
+		,m_bExit(true)
 	{
 		
 	}
@@ -20,10 +63,9 @@ namespace Qy_IPC
 	Qy_Ipc_Manage::~Qy_Ipc_Manage(void)
 	{
 		this->m_bExit=true;
-		SetEvent(m_HIpcHeartRateEvent);
-		if(m_QyIpcType==EQyIpcType::Server)
+		if(m_QyIpcType==QyIpcServer)
 		{
-			for(int i=0;i<m_IPC_Vect.size();i++)
+			for(size_t i=0;i<m_IPC_Vect.size();i++)
 			{
 				SQy_IPC_Context *P=((Qy_Ipc_Win*)m_IPC_Vect[i])->Get_IPC_Context();
 				DisconnectNamedPipe(P->hPipeInst);
@@ -56,16 +98,8 @@ namespace Qy_IPC
 			int i=0;
 			i++;
 		}
-		//::CloseHandle(m_HIpcHeartRateEvent);
 	}
-	Qy_Ipc_Manage* Qy_Ipc_Manage::GetInstance()
-	{
-	   if(m_Instance==NULL)
-	   {
-		   m_Instance= new Qy_Ipc_Manage();
-	   }
-	   return m_Instance;
-	}
+	
 	int Qy_Ipc_Manage::Init(IQy_HandelReceiveData* pReceiveData,EQyIpcType m_QyIpcType,IQy_IPC_DisConnect *pDisConnect)
 	{
 		m_pDisConnect=pDisConnect;
@@ -73,23 +107,18 @@ namespace Qy_IPC
 		m_pQy_HandelReceiveData=pReceiveData;
 		m_ArrayHandleCount=0;
 		memset(m_ArrayHandle,0,sizeof(m_ArrayHandle));
-		m_HIpcHeartRateEvent=CreateEvent(NULL, TRUE, FALSE, NULL);
+		
 		memset(&m_ClientQy_IPC_Context,0,sizeof(m_ClientQy_IPC_Context));
-		int  ll=::SetTimer(NULL,(int)this,10000,QyTimerHandle);
 		m_nIsStart=0;
 		m_bExit=false;
-		ll++;
 		return 1;
 	}
-	void  Qy_Ipc_Manage::FreeInstance()
-	{
-		delete m_Instance;
-	}
+	
 	bool Qy_Ipc_Manage::CreatePipe(std::string name,unsigned int PipeInstanceCount)
 	{
-		if(m_QyIpcType==EQyIpcType::Server)
+		if(m_QyIpcType==QyIpcServer)
 		{
-			for(int i=0;i<PipeInstanceCount;i++)
+			for(size_t i=0;i<PipeInstanceCount;i++)
 			{
 				Qy_Ipc_Win *Ipc = new Qy_Ipc_Win();
 				if(!Ipc->CreatePipe(name))
@@ -182,7 +211,26 @@ namespace Qy_IPC
 			}/**/
 			return TRUE;
 	}
-	bool  Qy_Ipc_Manage::WritePipe(char *pBuf,int Len,HANDLE hPipeInst)
+
+
+	unsigned int Qy_Ipc_Manage::check_sum(unsigned char * data,unsigned int  DataSize)
+	{
+		if ((data == NULL) || (DataSize==0))
+		{
+			return 0;
+		}
+
+		register unsigned int   sum  = 0;
+		register unsigned int   iter = DataSize;
+		register unsigned char  *bptr = data;
+
+		while (iter-- > 0){
+			sum += *bptr;
+			bptr++;
+		}
+		return sum;
+	}
+	bool  Qy_Ipc_Manage::WritePipe(unsigned char *pBuf,unsigned int BufLen,HANDLE hPipeInst)
 	{
 		
 		if(m_nIsStart<=0)
@@ -192,9 +240,9 @@ namespace Qy_IPC
 		}
           
 		SQy_IPC_Context *pIpc=NULL;
-		if(m_QyIpcType==EQyIpcType::Server)
+		if(m_QyIpcType==QyIpcServer)
 		{
-			for(int i=0;i<m_IPC_Vect.size();i++)
+			for(size_t i=0;i<m_IPC_Vect.size();i++)
 			{
 				pIpc=((Qy_Ipc_Win *)m_IPC_Vect[i])->Get_IPC_Context();
 				if(pIpc->hPipeInst==hPipeInst)
@@ -231,7 +279,7 @@ namespace Qy_IPC
  
 
 
-		if(m_QyIpcType!=EQyIpcType::Server)
+		if(m_QyIpcType!=QyIpcServer)
 		{
 			hPipeInst=m_ClientQy_IPC_Context.hPipeInst;
 			
@@ -239,17 +287,17 @@ namespace Qy_IPC
 		{
 				hPipeInst=((Qy_Ipc_Win*)m_IPC_Vect[0])->Get_IPC_Context()->hPipeInst;
 		}
-		static int HeaderLen=sizeof(SQy_IPC_MSG_HEADER);
+		static size_t HeaderLen=sizeof(SQy_IPC_MSG_HEADER);
 		GUID PktGuid;
          CoCreateGuid(&PktGuid);
-		int PktLen=PipeBufferSize-HeaderLen-100;
+		unsigned int PktLen=PipeBufferSize-HeaderLen;
 		int PktId=0;
 
 		
 		SQy_IPC_MSG_HEADER MsgHeader;//=(SQy_IPC_MSG_HEADER*)::malloc(sizeof(SQy_IPC_MSG_HEADER));
 		MsgHeader.MsgType=1;
 		
-		MsgHeader.TotalDataLen=Len;
+		MsgHeader.TotalDataLen=BufLen;
         MsgHeader.PktGuid=PktGuid;
 		m_Lock.Lock();
 
@@ -260,21 +308,29 @@ namespace Qy_IPC
 			   m_IPC_SendDataQueueMap.insert(std::pair<HANDLE,std::queue<SQy_IPC_MSG*>*>(hPipeInst,pQ));
 			   It=m_IPC_SendDataQueueMap.find(hPipeInst);
 		}
-		while(Len>0)
+		while(BufLen>0)
 		{
+			unsigned char *pData =NULL;
 			SQy_IPC_MSG *msg=(SQy_IPC_MSG*)::malloc(sizeof(SQy_IPC_MSG));
 			msg->hPipeInst=hPipeInst;
 			MsgHeader.PktId=PktId;
-			MsgHeader.DataLen=Len> PktLen ? PktLen:Len;
-            char *pData = new char[PktLen];
-			memset(pData,0,PktLen);
+			MsgHeader.DataLen=BufLen > PktLen ? PktLen:BufLen;
+            
+			pData =(unsigned char*)::malloc(PipeBufferSize);
+			memset(pData,0,PipeBufferSize);
+			//拷贝数据
+            memcpy(pData+HeaderLen,pBuf,MsgHeader.DataLen);
+			
+			//拷贝头
+			MsgHeader.DataSum=check_sum(pData,PktLen);
 			memcpy(pData,&MsgHeader,HeaderLen);
-            memcpy(pData+HeaderLen,pBuf,Len);
+           
+
 			msg->pBuf=pData;
-			msg->Len=PktLen;
+			msg->Len=PipeBufferSize;
+
 			It->second->push(msg);
-			Len-=MsgHeader.DataLen;
-			//free(msg);
+			BufLen-=MsgHeader.DataLen;
 		}
 		
 		if(pIpc->dwState==WRITOK_STATE||pIpc->dwState==READING_STATE)
@@ -290,7 +346,7 @@ namespace Qy_IPC
 		
 		    m_Lock.Lock();
 			
-			if(m_QyIpcType==EQyIpcType::Server)
+			if(m_QyIpcType==QyIpcServer)
 			{
 				std::map<HANDLE,std::queue<SQy_IPC_MSG*>*>::iterator It=m_IPC_SendDataQueueMap.find(hPipeInst);
 				if(It!=m_IPC_SendDataQueueMap.end())
@@ -305,7 +361,7 @@ namespace Qy_IPC
 					delete It->second;
 					m_IPC_SendDataQueueMap.erase(It);
 				}
-					for(int i=0;i<m_IPC_Vect.size();i++)
+					for(size_t i=0;i<m_IPC_Vect.size();i++)
 					{
 							SQy_IPC_Context *pIpc=((Qy_Ipc_Win *)m_IPC_Vect[i])->Get_IPC_Context();
 							if(pIpc->hPipeInst==hPipeInst)
@@ -318,7 +374,7 @@ namespace Qy_IPC
 								if (!DisconnectNamedPipe(hPipeInst))  
 								{  
 									m_Lock.Unlock();
-									return -GetLastError();
+									return 0-GetLastError();
 								} 
 								if(m_pDisConnect!=NULL)
 									m_pDisConnect->DisConnct(hPipeInst);
@@ -371,14 +427,14 @@ namespace Qy_IPC
     }
 	void Qy_Ipc_Manage:: ReadWritePipe()
 	{
-		DWORD i, dwWait, cbRet, dwErr;  
+		DWORD  cbRet;  
 		char *pBuf=( char*)::malloc(PipeBufferSize);
 		memset(pBuf,0,PipeBufferSize);
 		BOOL	fSuccess=FALSE;
 		int Index=0;
 		while(1)
 		{
-			if(m_QyIpcType==EQyIpcType::Server)
+			if(m_QyIpcType==QyIpcServer)
 			{
 					DWORD dwWait = WaitForMultipleObjects(  
 						m_ArrayHandleCount,    // number of event objects   
@@ -444,7 +500,7 @@ namespace Qy_IPC
 								SQy_IPC_MSG* It=It2->second->front();
 								pIpc->dwState=WRITING_STATE;
 									memset(pIpc->SendBuf,0,PipeBufferSize);
-									char *pBuf=It->pBuf;
+									unsigned char *pBuf=It->pBuf;
 									memcpy(pIpc->SendBuf,pBuf,It->Len);
 									pIpc->cbToWrite=It->Len;
 									WriteFile(  
@@ -538,7 +594,7 @@ namespace Qy_IPC
 								SQy_IPC_MSG* It=It2->second->front();
 
 								memset(m_ClientQy_IPC_Context.SendBuf,0,PipeBufferSize);
-								char *pBuf=It->pBuf;
+								unsigned char *pBuf=It->pBuf;
 								memcpy(m_ClientQy_IPC_Context.SendBuf,pBuf,It->Len);
 								m_ClientQy_IPC_Context.cbToWrite=It->Len;
 								BOOL fSuccess =WriteFile(  
@@ -583,6 +639,10 @@ namespace Qy_IPC
 	} 
 	void Qy_Ipc_Manage::ParseReceiveData(char *buf,int Len,HANDLE hPipeInst)
 	{
+		if(Len!=PipeBufferSize){
+			assert(0);
+			return;
+		}
 		if(Len>=4)
 		{
 			SQy_IPC_MSG_HEADER header;
@@ -598,6 +658,7 @@ namespace Qy_IPC
 						header.PktGuid.Data1,header.PktGuid.Data2,header.PktGuid.Data3,
 						header.PktGuid.Data4[0],header.PktGuid.Data4[1],header.PktGuid.Data4[2],header.PktGuid.Data4[3],
 						header.PktGuid.Data4[4],header.PktGuid.Data4[5],header.PktGuid.Data4[6],header.PktGuid.Data4[7]);
+					
 					printf("数据包：%s\n",form);
 					printf("数据包：DataLen=%d\n",header.DataLen);
 					printf("数据包：TotalDataLen=%d\n",header.TotalDataLen);
@@ -630,26 +691,29 @@ namespace Qy_IPC
 									info->pDataList->push_back(pData);
 									m_IPC_ReceiveDataMap.insert(std::pair<std::string, SReceiveCacheInfo*>(form,info));
 									It=m_IPC_ReceiveDataMap.find(form);
-							}else
-							{
+							}else{
 									SReceiveData* pData =(SReceiveData*)::malloc(sizeof(SReceiveData));
 									pData->PktId=header.PktId;
 									pData->DataLen=header.DataLen;
 									pData->Buf=pBuf;
-									It->second->CurLen+header.DataLen;
+									It->second->CurLen+=header.DataLen;
 									It->second->pDataList->push_back(pData);
 									if(It->second->CurLen>=It->second->TotalLen)
 									{
 	                                     std::sort(It->second->pDataList->begin(),It->second->pDataList->end(),SortByM1); 
 										 char *PtChar = (char*)::malloc(It->second->TotalLen);
 										 int AcLen=0;
-										 for(int i=0;i<It->second->pDataList->size();i++)
+										 for(size_t i=0;i<It->second->pDataList->size();i++)
 										 {
 											  pData =It->second->pDataList->at(i);
                                               memcpy(PtChar+AcLen,pData->Buf,pData->DataLen);
 											  AcLen+=pData->DataLen;
 											  free(pData->Buf);
 											  free(pData);
+										 }
+										 if(AcLen!=It->second->TotalLen)
+										 {
+										    assert(0);
 										 }
                                         m_pQy_HandelReceiveData->HandelReceiveData(PtChar,AcLen, form);
                                         It->second->pDataList->clear();
@@ -662,9 +726,6 @@ namespace Qy_IPC
 						}
 					}
 				}
-			}else if(header.MsgType==0)
-			{
-				printf("心跳包\n");
 			}
 		}
 	}

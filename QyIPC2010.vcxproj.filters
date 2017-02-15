@@ -21,9 +21,6 @@
     <ClCompile Include="Qy_Ipc_Manage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Qy_IPC_PMan.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Qy_Ipc_Win.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -39,9 +36,6 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Qy_Ipc_Manage.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Qy_IPC_PMan.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Qy_Ipc_Win.h">

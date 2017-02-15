@@ -110,13 +110,13 @@ namespace Qy_IPC
 
 	void CQy_IPC_PMan::WriteData(std::string &ExeFile,char* pBuf,int Len)
 	{
-		std::string ffff=ExeFile;
+		/*std::string ffff=ExeFile;
 		Qy_Ipc_Manage *pInstcen=Qy_Ipc_Manage::GetInstance();
 		std::map<std::string,HANDLE>::iterator It=m_ExePipeMap.find(ffff);
 		if(It!=m_ExePipeMap.end())
 		{
              pInstcen->WritePipe(pBuf,Len,It->second);
-		}
+		}*/
 		
 	}
 	void CQy_IPC_PMan::SetExeInfo(std::string &ExeFile,HANDLE Pipe)
@@ -140,7 +140,7 @@ namespace Qy_IPC
 	}
 	BOOL CQy_IPC_PMan::CloseApp(std::string ExeFile)
 	{
-		Qy_Ipc_Manage *pInstcen=Qy_Ipc_Manage::GetInstance();
+		Qy_Ipc_Manage *pInstcen=NULL;//Qy_Ipc_Manage::GetInstance();
 		std::map<std::string,HANDLE>::iterator It=m_ExePipeMap.find(ExeFile);
 		if(It!=m_ExePipeMap.end())
 		{

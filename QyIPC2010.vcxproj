@@ -72,7 +72,6 @@
   <ItemGroup>
     <ClCompile Include="Qy_Ipc_HandelReceiveData.cpp" />
     <ClCompile Include="Qy_Ipc_Manage.cpp" />
-    <ClCompile Include="Qy_IPC_PMan.cpp" />
     <ClCompile Include="Qy_Ipc_Win.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -80,7 +79,6 @@
     <ClInclude Include="Qy_IPC_Context.h" />
     <ClInclude Include="Qy_Ipc_HandelReceiveData.h" />
     <ClInclude Include="Qy_Ipc_Manage.h" />
-    <ClInclude Include="Qy_IPC_PMan.h" />
     <ClInclude Include="Qy_Ipc_Win.h" />
   </ItemGroup>
   <ItemGroup>

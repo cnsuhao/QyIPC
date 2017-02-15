@@ -30,24 +30,29 @@ namespace Qy_IPC
 		int UpdataTime;//更新时间
 		char ReceiveBuf[PipeBufferSize];
 		char SendBuf[PipeBufferSize];
-	}; 
+	}SQy_IPC_Context; 
 #pragma  pack(1)
 	typedef struct SQy_IPC_MSG_HEADER
 	{
 	   int	     MsgType;
 	   GUID	     PktGuid;
+	   //分包ID
        int       PktId;
-       int DataLen;
-	   int TotalDataLen;
-	};
+	   //本包数据长度
+       unsigned int DataLen;
+	   unsigned int DataSum;
+	   //数总长度
+	   unsigned int TotalDataLen;
+
+	} SQy_IPC_MSG_HEADER;
 #pragma pack()
 	typedef struct SQy_IPC_MSG
 	{
-		char *pBuf;
-		int	 Len;
+		unsigned char *pBuf;
+		unsigned int	 Len;
 		//管道句柄
 		HANDLE hPipeInst;
-	};
+	}SQy_IPC_MSG;
     
 }
 #endif
