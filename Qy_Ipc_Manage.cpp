@@ -70,7 +70,7 @@ namespace Qy_IPC
 		if(m_nIsStart>0)
 		{
 			m_bExit=true;
-			DWORD dwWait = WaitForMultipleObjects(  2,
+			DWORD dwWait = WaitForMultipleObjects(  1,
 				m_ThreadHandles,      // array of event objects   
 				TRUE,        // does not wait for all   
 				INFINITE); 
@@ -414,18 +414,13 @@ namespace Qy_IPC
 		p->ReadWritePipe();
 		return 1;
 	}
-	unsigned __stdcall Qy_Ipc_Manage::QyIpcHeartRate(LPVOID lpParameter)
-	{
-          Qy_Ipc_Manage *p =(Qy_Ipc_Manage*)lpParameter;
-		  p->WriteIpcHeartRate();
-		  return 1;
-	}
+
 	void Qy_Ipc_Manage::Start()
 	{
 		 m_nIsStart=1;
 		 UINT addrr=0;
 		 m_ThreadHandles[0]=(HANDLE)_beginthreadex(NULL, NULL, QyIpcManage, (LPVOID)this, 0,&addrr);
-		 m_ThreadHandles[1]=(HANDLE)_beginthreadex(NULL, NULL, QyIpcHeartRate, (LPVOID)this, 0,&addrr);
+		
 	}
     
 	void Qy_Ipc_Manage:: ReadWritePipe()

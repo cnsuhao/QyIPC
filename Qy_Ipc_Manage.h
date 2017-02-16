@@ -61,11 +61,9 @@ namespace Qy_IPC
 			  BOOL DisConnect(HANDLE hPipeInst);
 	   private: 
 		      static unsigned __stdcall QyIpcManage(LPVOID lpParameter);
-		      static unsigned __stdcall QyIpcHeartRate(LPVOID lpParameter);
 	   protected:
 		      IQy_IPC_DisConnect *m_pDisConnect;
 		      void ParseReceiveData(char *buf,int Len,HANDLE hPipeInst);
-		      void WriteIpcHeartRate();
 			  void ReadWritePipe();
               //管道实例数据
 			  std::vector<IQy_Ipc_Base*> m_IPC_Vect;
