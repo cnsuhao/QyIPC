@@ -70,6 +70,13 @@ namespace Qy_IPC
 		if(m_nIsStart>0)
 		{
 			m_bExit=true;
+			if(m_QyIpcType==QyIpcServer)
+			{
+			     SQy_IPC_Context *P=((Qy_Ipc_Win*)m_IPC_Vect[0])->Get_IPC_Context();
+				 SetEvent(P->hDataEvent);
+			}else{
+			     SetEvent(m_ClientQy_IPC_Context.hDataEvent);
+			}
 			DWORD dwWait = WaitForMultipleObjects(  1,
 				m_ThreadHandles,      // array of event objects   
 				TRUE,        // does not wait for all   
@@ -90,22 +97,25 @@ namespace Qy_IPC
 				::CloseHandle(P->oWriteOverlap.hEvent);
 				IQy_Ipc_Base* p2=m_IPC_Vect.at(i);
 				delete p2;
+				m_IPC_Vect.clear();
 			}
 		}else
 		{
-			::CloseHandle(m_ClientQy_IPC_Context.hPipeInst);
-			 m_ClientQy_IPC_Context.hPipeInst=INVALID_HANDLE_VALUE;
-			::CloseHandle(m_ClientQy_IPC_Context.oOverlap.hEvent);
-			 m_ClientQy_IPC_Context.oOverlap.hEvent=INVALID_HANDLE_VALUE;
-			::CloseHandle(m_ClientQy_IPC_Context.oWriteOverlap.hEvent);
-			 m_ClientQy_IPC_Context.oWriteOverlap.hEvent=INVALID_HANDLE_VALUE;
-			::CloseHandle(m_ClientQy_IPC_Context.hDataEvent);
-			 m_ClientQy_IPC_Context.hDataEvent=INVALID_HANDLE_VALUE;
+			if(m_ClientQy_IPC_Context.hPipeInst!=INVALID_HANDLE_VALUE){
+				::CloseHandle(m_ClientQy_IPC_Context.hPipeInst);
+				 m_ClientQy_IPC_Context.hPipeInst=INVALID_HANDLE_VALUE;
+				::CloseHandle(m_ClientQy_IPC_Context.oOverlap.hEvent);
+				 m_ClientQy_IPC_Context.oOverlap.hEvent=INVALID_HANDLE_VALUE;
+				::CloseHandle(m_ClientQy_IPC_Context.oWriteOverlap.hEvent);
+				 m_ClientQy_IPC_Context.oWriteOverlap.hEvent=INVALID_HANDLE_VALUE;
+				::CloseHandle(m_ClientQy_IPC_Context.hDataEvent);
+				 m_ClientQy_IPC_Context.hDataEvent=INVALID_HANDLE_VALUE;
+			}
 		}
 		
 		
 	}
-	int Qy_Ipc_Manage::Init(IQy_HandelReceiveData* pReceiveData,EQyIpcType m_QyIpcType,IQy_IPC_DisConnect *pDisConnect)
+	void Qy_Ipc_Manage::Init(IQy_HandelReceiveData* pReceiveData,EQyIpcType m_QyIpcType,IQy_IPC_DisConnect *pDisConnect)
 	{
 		m_pDisConnect=pDisConnect;
 		this->m_QyIpcType=m_QyIpcType;
@@ -116,7 +126,7 @@ namespace Qy_IPC
 		memset(&m_ClientQy_IPC_Context,0,sizeof(m_ClientQy_IPC_Context));
 		m_nIsStart=0;
 		m_bExit=false;
-		return 1;
+		return;
 	}
 	
 	bool Qy_Ipc_Manage::CreatePipe(std::string PipeName,unsigned char ClientMaxCount)
@@ -167,39 +177,7 @@ namespace Qy_IPC
 				printf("Unable to open named INVALID_HANDLE_VALUE");
 				 return false;
 			}
-	  //      DWORD ret=GetLastError() ;
-			//if (ret != ERROR_PIPE_BUSY )
-			//{
-			//	//_tprintf( TEXT("Could not open pipe. GLE=%d\n"), GetLastError() ); 
-			//	return -1;
-			//}
-			//if(!WaitNamedPipeA(PipeName.c_str(), 5000))
-			//{
-			//	printf("Unable to open named pipe %s w/err 0x%08lx\n",PipeName.c_str(), GetLastError());
-	  //          return false;
-			//}
-			//if (// Exit if an error other than ERROR_PIPE_BUSY occurs
-			//	GetLastError() != ERROR_PIPE_BUSY 
-			//	||
-			//	// All pipe instances are busy, so wait for 5 seconds
-			//	!WaitNamedPipeA(PipeName.c_str(), 5000)) 
-			//{
-			//	/*printf(_T("Unable to open named pipe %s w/err 0x%08lx\n"),
-			//		PipeName.c_str(), GetLastError());*/
-			//	return false;
-			//}
-
-
-			//DWORD dwMode = PIPE_READMODE_MESSAGE;
-			//BOOL bResult = SetNamedPipeHandleState(m_hClientPipe, &dwMode, NULL, NULL);
-			//if (!bResult) 
-			//{
-			//	 ret=GetLastError();
-			//	/*_tprintf(_T("SetNamedPipeHandleState failed w/err 0x%08lx\n"), 
-			//		GetLastError()); */
-			//	return false;
-			//}
-	
+	 
 			m_ClientQy_IPC_Context.oOverlap.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 			m_ClientQy_IPC_Context.hDataEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 			m_ClientQy_IPC_Context.oWriteOverlap.hEvent= CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -210,12 +188,8 @@ namespace Qy_IPC
 			DWORD cbRet;
 			BOOL fSuccess=::ReadFile(m_ClientQy_IPC_Context.hPipeInst,m_ClientQy_IPC_Context.ReceiveBuf,PipeBufferSize,&cbRet,  &m_ClientQy_IPC_Context.oOverlap);
 			m_ClientQy_IPC_Context.dwState = READING_STATE;
-			if(fSuccess)
-			{
-				int i=0;
-				i++;
-			}/**/
-			return TRUE;
+			
+			return TRUE;;
 	}
 
 
@@ -296,7 +270,7 @@ namespace Qy_IPC
 		static size_t HeaderLen=sizeof(SQy_IPC_MSG_HEADER);
 		GUID PktGuid;
          CoCreateGuid(&PktGuid);
-		unsigned int PktLen=PipeBufferSize-HeaderLen;
+		
 		int PktId=0;
 
 		
@@ -314,6 +288,7 @@ namespace Qy_IPC
 			   m_IPC_SendDataQueueMap.insert(std::pair<HANDLE,std::queue<SQy_IPC_MSG*>*>(hPipeInst,pQ));
 			   It=m_IPC_SendDataQueueMap.find(hPipeInst);
 		}
+		unsigned int PktLen=PipeBufferSize-HeaderLen;
 		while(BufLen>0)
 		{
 			unsigned char *pData =NULL;
@@ -341,14 +316,27 @@ namespace Qy_IPC
 		
 		if(pIpc->dwState==WRITOK_STATE||pIpc->dwState==READING_STATE)
 		{
-			SetEvent(pIpc->hDataEvent);
+			BOOL xx=SetEvent(pIpc->hDataEvent);
+			printf("写 %d \n",xx);
 		}
 		m_Lock.Unlock();
 		return true;
 	}
 	
+	bool Qy_Ipc_Manage::WritePipe(std::string StrData,HANDLE hPipeInst)
+	{
+	    bool Ok=false;
+		int len=StrData.length()+100;
+		unsigned char *pBuf=(unsigned char *)::malloc(len);
+		memset(pBuf,0,len);
+		memcpy(pBuf,StrData.c_str(),StrData.length());
+		Ok=WritePipe(pBuf,StrData.length()+2,hPipeInst);
+		free(pBuf);
+		return Ok;
+	}
 	BOOL Qy_Ipc_Manage::DisConnect(HANDLE hPipeInst)
 	{
+		     
 		
 		    m_Lock.Lock();
 			
@@ -430,6 +418,7 @@ namespace Qy_IPC
 		memset(pBuf,0,PipeBufferSize);
 		BOOL	fSuccess=FALSE;
 		int Index=0;
+		Sleep(20);
 		while(!m_bExit)
 		{
 			if(m_QyIpcType==QyIpcServer)
@@ -440,9 +429,9 @@ namespace Qy_IPC
 						FALSE,        // does not wait for all   
 						INFINITE); 
 					int i = dwWait - WAIT_OBJECT_0;  // determines which pipe   
-					if (i < 0 || i >(m_ArrayHandleCount - 1))  
+					if ( i<0||i >(m_ArrayHandleCount - 1))  
 					{  
-						printf("Index out of range.\n");  
+						printf("Index out of range. %d\n",m_ArrayHandleCount);  
 						break;
 					} 
 					if(m_bExit)
@@ -540,6 +529,8 @@ namespace Qy_IPC
 					
 			}else
 			{
+				
+					printf("%d,%d,%d,%d \n",m_ArrayHandle[0],m_ArrayHandle[1],m_ArrayHandle[2],m_ArrayHandleCount);  
 					DWORD dwWait = WaitForMultipleObjects(  
 					m_ArrayHandleCount,    // number of event objects   
 					m_ArrayHandle,      // array of event objects   
@@ -548,7 +539,8 @@ namespace Qy_IPC
 					int i = dwWait - WAIT_OBJECT_0;  
 					if (i < 0 || i >(m_ArrayHandleCount - 1))  
 					{  
-						printf("Index out of range.\n");  
+						printf("Index out of range. %d,%d,%d,%d\n",m_ArrayHandleCount,i,WAIT_FAILED,GetLastError());  
+						printf("%d,%d,%d \n",m_ArrayHandle[0],m_ArrayHandle[1],m_ArrayHandle[2]);  
 						break;
 					}  
 					if(m_bExit)
@@ -608,7 +600,7 @@ namespace Qy_IPC
 									&m_ClientQy_IPC_Context.oWriteOverlap);
 								if(fSuccess)
 								{
-									printf("写数据\n");
+									printf("写数据成功\n");
 								}
 								//if(It-)
 								free(It->pBuf);
@@ -674,7 +666,7 @@ namespace Qy_IPC
 						memcpy(pBuf,buf+headerLen,header.DataLen);
 						if(header.DataLen==header.TotalDataLen)
 						{
-							m_pQy_HandelReceiveData->HandelReceiveData(pBuf,header.DataLen, form);
+							m_pQy_HandelReceiveData->HandelReceiveData(pBuf,header.DataLen, hPipeInst);
 							free(pBuf);
 						}else if(header.DataLen<header.TotalDataLen)
 						{
@@ -718,7 +710,7 @@ namespace Qy_IPC
 										 {
 										    assert(0);
 										 }
-                                        m_pQy_HandelReceiveData->HandelReceiveData(PtChar,AcLen, form);
+                                        m_pQy_HandelReceiveData->HandelReceiveData(PtChar,AcLen, hPipeInst);
                                         It->second->pDataList->clear();
 										delete It->second;
 										delete It->second->pDataList;

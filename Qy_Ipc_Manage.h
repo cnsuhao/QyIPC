@@ -46,7 +46,7 @@ namespace Qy_IPC
 			  ~Qy_Ipc_Manage(void);
 			 
 			  //初始化
-			  int Init(IQy_HandelReceiveData* pReceiveData,EQyIpcType m_QyIpcType,IQy_IPC_DisConnect *pDisConnect=NULL);
+			  void Init(IQy_HandelReceiveData* pReceiveData,EQyIpcType m_QyIpcType,IQy_IPC_DisConnect *pDisConnect=NULL);
 			  
 			  //创建管道,服务端调用
 			  bool CreatePipe(std::string PipeName,unsigned char ClientMaxCount);
@@ -57,6 +57,7 @@ namespace Qy_IPC
 			  void Start();
 			  void Stop();
 			  bool WritePipe(unsigned char *pBuf,unsigned int Len,HANDLE hPipeInst);
+			  bool WritePipe(std::string StrData,HANDLE hPipeInst);
 			  unsigned int check_sum(unsigned char * data,unsigned int  DataSize);
 			  BOOL DisConnect(HANDLE hPipeInst);
 	   private: 
@@ -75,7 +76,7 @@ namespace Qy_IPC
 			  //发送数据队列
 			  std::map<HANDLE,std::queue<SQy_IPC_MSG*>*> m_IPC_SendDataQueueMap;
 			  HANDLE m_ArrayHandle[1024];
-			  int m_ArrayHandleCount;
+			  volatile  int m_ArrayHandleCount;
 			  //接收后处理数据的对象
 			  IQy_HandelReceiveData* m_pQy_HandelReceiveData;
 			  //IPC 

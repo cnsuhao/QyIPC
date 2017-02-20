@@ -7,7 +7,7 @@ namespace Qy_IPC
 	{ 
 		   public:
 				  Qy_Ipc_HandelReceiveData();
-				   virtual void HandelReceiveData(char *buf,int Len,std::string strId);
+				   virtual void HandelReceiveData(char *buf,int Len,void* hPipeInst);
 	};
 }
 #endif

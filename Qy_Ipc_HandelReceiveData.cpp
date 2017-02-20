@@ -6,7 +6,7 @@ namespace Qy_IPC
 	{
 
 	}
-	void Qy_Ipc_HandelReceiveData::HandelReceiveData(char *buf,int Len,std::string strId)
+	void Qy_Ipc_HandelReceiveData::HandelReceiveData(char *buf,int Len,void* hPipeInst)
 	{
 		printf("%s\n",buf);
 	}
