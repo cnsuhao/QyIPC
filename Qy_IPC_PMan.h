@@ -13,13 +13,12 @@ namespace Qy_IPC
 	        
 		     static CQy_IPC_PMan* GetInstance();
 		     static void FreeInstance();
-			 bool StartApp(std::string &ExeFile, std::string &CmdLine);
-			 int CloseApp(std::string ExeFile);
+			 bool StartApp(std::wstring ExeFile, std::wstring CmdLine);
 			 bool KillProcessFromName(std::wstring strProcessName);
      private:
-			CQy_IPC_PMan(); 
-			~CQy_IPC_PMan();
-			static CQy_IPC_PMan* pInstance;
+			 CQy_IPC_PMan(); 
+			 ~CQy_IPC_PMan();
+			 static CQy_IPC_PMan* pInstance;
    };
 }
 #endif

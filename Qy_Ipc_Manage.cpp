@@ -133,6 +133,26 @@ namespace Qy_IPC
 	{
 		if(m_QyIpcType==QyIpcServer)
 		{
+			 HANDLE hPipeInst = CreateFileA( 
+				PipeName.c_str(),			// Pipe name 
+				GENERIC_READ |			// Read and write access 
+				GENERIC_WRITE,
+				0,						// No sharing 
+				NULL,					// Default security attributes
+				OPEN_EXISTING,			// Opens existing pipe|FILE_FLAG_OVERLAPPED 
+				SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION |
+				FILE_FLAG_OVERLAPPED,						// Default attributes 
+				NULL);					// No template file 
+
+			// Break if the pipe handle is valid. 
+			if (hPipeInst!= INVALID_HANDLE_VALUE) 
+			{
+				::CloseHandle(hPipeInst);
+				 printf("管道已经创建！");
+				 return false;
+			}
+
+
 			size_t PipeInstanceCount=ClientMaxCount;
 			for(size_t i=0;i<PipeInstanceCount;i++)
 			{
@@ -160,7 +180,7 @@ namespace Qy_IPC
 	bool Qy_Ipc_Manage::OpenServerPipe(std::string PipeName)
 	{
 		
-			m_ClientQy_IPC_Context.hPipeInst = CreateFileA( 
+			    m_ClientQy_IPC_Context.hPipeInst = CreateFileA( 
 				PipeName.c_str(),			// Pipe name 
 				GENERIC_READ |			// Read and write access 
 				GENERIC_WRITE,
@@ -712,6 +732,7 @@ namespace Qy_IPC
 										 }
                                         m_pQy_HandelReceiveData->HandelReceiveData(PtChar,AcLen, hPipeInst);
                                         It->second->pDataList->clear();
+										free(PtChar);
 										delete It->second;
 										delete It->second->pDataList;
 										m_IPC_ReceiveDataMap.erase(It);
