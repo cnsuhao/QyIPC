@@ -712,9 +712,10 @@ namespace Qy_IPC
 										 }
                                         m_pQy_HandelReceiveData->HandelReceiveData(PtChar,AcLen, hPipeInst);
                                         It->second->pDataList->clear();
+										free(PtChar);
 										delete It->second;
 										delete It->second->pDataList;
-										m_IPC_ReceiveDataMap.erase(It);
+										It=m_IPC_ReceiveDataMap.erase(It);
 									}
 							}
 
