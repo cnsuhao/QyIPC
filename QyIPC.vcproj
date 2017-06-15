@@ -79,8 +79,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="..\KKRealse\"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\$(ConfigurationName)\vs2008"
+			IntermediateDirectory="$(ConfigurationName)\vs2008"
 			ConfigurationType="4"
 			CharacterSet="1"
 			WholeProgramOptimization="1"
@@ -157,10 +157,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Qy_IPC_PMan.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\Qy_Ipc_Win.cpp"
 				>
 			</File>
@@ -184,10 +180,6 @@
 			</File>
 			<File
 				RelativePath=".\Qy_Ipc_Manage.h"
-				>
-			</File>
-			<File
-				RelativePath=".\Qy_IPC_PMan.h"
 				>
 			</File>
 			<File
