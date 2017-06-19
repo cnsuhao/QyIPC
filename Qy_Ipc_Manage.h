@@ -81,7 +81,8 @@ namespace Qy_IPC
 			  std::vector<IQy_Ipc_Base*> m_IPC_Vect;
 			  //线程
 			  HANDLE m_ThreadHandles[2];
-			  int m_nIsStart;
+			  HANDLE m_PipeThreadRWExit;
+			  int    m_nIsStart;
 			 
 			  ///接收数据队列
 			  std::map<std::string,SReceiveCacheInfo*>   m_IPC_ReceiveDataMap;

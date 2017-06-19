@@ -53,7 +53,7 @@ namespace Qy_IPC
 		return &m_crisec;
 	}
 
-	Qy_Ipc_Manage::Qy_Ipc_Manage():m_pDisConnect(NULL),m_nIsStart(0),m_bExit(true)
+	Qy_Ipc_Manage::Qy_Ipc_Manage():m_pDisConnect(NULL),m_nIsStart(0),m_bExit(true),m_PipeThreadRWExit(0)
 	{
 		
 	}
@@ -64,29 +64,26 @@ namespace Qy_IPC
 	}
 	void Qy_Ipc_Manage::Stop()
 	{
+		if(!m_nIsStart)
+			return;
 		
-		if(m_nIsStart>0)
-		{
-			m_bExit=true;
-			if(m_QyIpcType==QyIpcServer)
-			{
-			     SQy_IPC_Context *P=((Qy_Ipc_Win*)m_IPC_Vect[0])->Get_IPC_Context();
-				 SetEvent(P->hDataEvent);
-			}else{
-			     SetEvent(m_ClientQy_IPC_Context.hDataEvent);
-			}
-			DWORD dwWait = WaitForMultipleObjects(  1,
-				m_ThreadHandles,      // array of event objects   
-				TRUE,        // does not wait for all   
-				INFINITE); 
-			printf("Exit");
-			m_nIsStart=0;
-		}
-	   
+		m_bExit=true;
 		if(m_QyIpcType==QyIpcServer)
 		{
-			for(size_t i=0;i<m_IPC_Vect.size();i++)
-			{
+			    SQy_IPC_Context *P=((Qy_Ipc_Win*)m_IPC_Vect[0])->Get_IPC_Context();
+				SetEvent(P->hDataEvent);
+		}else{
+			    SetEvent(m_ClientQy_IPC_Context.hDataEvent);
+		}
+		DWORD dwWait =::WaitForSingleObject(m_PipeThreadRWExit,INFINITE);
+		printf("Exit");
+		::CloseHandle(m_PipeThreadRWExit);
+		m_nIsStart=0;
+		m_PipeThreadRWExit=0;
+		
+		if(m_QyIpcType==QyIpcServer)
+		{
+			for(size_t i=0;i<m_IPC_Vect.size();i++){
 				SQy_IPC_Context *P=((Qy_Ipc_Win*)m_IPC_Vect[i])->Get_IPC_Context();
 				DisconnectNamedPipe(P->hPipeInst);
 				::CloseHandle(P->hPipeInst);
@@ -426,9 +423,13 @@ namespace Qy_IPC
 
 	void Qy_Ipc_Manage::Start()
 	{
-		 m_nIsStart=1;
-		 UINT addrr=0;
-		 m_ThreadHandles[0]=(HANDLE)_beginthreadex(NULL, NULL, QyIpcManage, (LPVOID)this, 0,&addrr);
+		if(!m_nIsStart)
+		{
+			 m_nIsStart=1;
+			 UINT addrr=0;
+			 m_PipeThreadRWExit=::CreateEvent(NULL,TRUE,FALSE,NULL);
+			 m_ThreadHandles[0]=(HANDLE)_beginthreadex(NULL, NULL, QyIpcManage, (LPVOID)this, 0,&addrr);
+		}
 		
 	}
     
@@ -442,7 +443,9 @@ namespace Qy_IPC
 			int i = dwWait - WAIT_OBJECT_0;  // determines which pipe   
 			if ( i<0||i >(m_ArrayHandleCount - 1))  
 			{  
-				printf("Index out of range. %d\n",m_ArrayHandleCount); 
+				printf("Index out of range. %d\n",m_ArrayHandleCount);
+				Sleep(10);
+			    m_bExit=true;
 				return;
 			} 
 			if(m_bExit)
@@ -551,6 +554,8 @@ namespace Qy_IPC
 			printf("Index out of range. %d,%d,%d,%d\n",m_ArrayHandleCount,i,WAIT_FAILED,GetLastError());  
 			printf("%d,%d,%d \n",m_ArrayHandle[0],m_ArrayHandle[1],m_ArrayHandle[2]);  
 #endif
+			Sleep(10);
+			m_bExit=true;
 			return;
 		}  
 		if(m_bExit)
@@ -633,7 +638,7 @@ namespace Qy_IPC
 			ResetEvent(m_ClientQy_IPC_Context.oWriteOverlap.hEvent);					
 		}
 	}
-	void Qy_Ipc_Manage:: ReadWritePipe()
+	void Qy_Ipc_Manage::ReadWritePipe()
 	{
 		while(!m_bExit)
 		{
@@ -641,11 +646,14 @@ namespace Qy_IPC
 				RwServer();
 			else
 				RwClient();
-			if(m_bExit)
-				break;
+			if(m_bExit){
+			  break;
+			}
+				
 		}
+		::SetEvent(m_PipeThreadRWExit);
 	}
-	bool SortByM1( const SReceiveData *v1, const SReceiveData *v2)//注意：本函数的参数的类型一定要与vector中元素的类型一致  
+	static bool SortByM1( const SReceiveData *v1, const SReceiveData *v2)//注意：本函数的参数的类型一定要与vector中元素的类型一致  
 	{  
 		return v1->PktId < v2->PktId;//升序排列  
 	}
