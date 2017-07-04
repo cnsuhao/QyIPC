@@ -468,6 +468,8 @@ namespace Qy_IPC
 												printf("客服端链接\n"); 
 												pIpc->dwState = READING_STATE;
 												SetEvent(pIpc->hDataEvent);	
+												if(m_pQy_HandelReceiveData!=NULL)
+							                          m_pQy_HandelReceiveData->HandelReceiveData(0,0, pIpc->hPipeInst);
 												break;
 						case READING_STATE:
 												printf("读取数据\n");
@@ -698,6 +700,7 @@ namespace Qy_IPC
 							if(AcLen!=It->second->TotalLen){
 							    assert(0);
 							}
+							if(m_pQy_HandelReceiveData!=NULL)
 							m_pQy_HandelReceiveData->HandelReceiveData(PtChar,AcLen, hPipeInst);
 							It->second->pDataList->clear();
 							free(PtChar);
