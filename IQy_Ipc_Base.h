@@ -18,7 +18,7 @@ namespace Qy_IPC
 	class IQy_HandelReceiveData
 	{
 	     public:
-			    virtual void HandelReceiveData(char *buf,int Len,void*  hPipeInst)=0;
+			    virtual void HandelReceiveData(char *buf,int Len,void* hPipeInst)=0;
 	};
 	//¶Ï¿ªÁ¬½Ó
 	class IQy_IPC_DisConnect

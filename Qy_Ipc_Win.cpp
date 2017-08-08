@@ -68,8 +68,8 @@ namespace Qy_IPC
 					  break;  
 			   case ERROR_NO_DATA:
 				   return false;
-	   default:
-		  return false;
+				   default:
+					  return false;
 		}
 
 		return true;

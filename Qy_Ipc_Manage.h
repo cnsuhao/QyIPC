@@ -48,8 +48,8 @@ namespace Qy_IPC
 			  //初始化
 			  void                      Init(IQy_HandelReceiveData* pReceiveData,EQyIpcType m_QyIpcType,IQy_IPC_DisConnect *pDisConnect=NULL);
 			  
-			  //创建管道,服务端调用
-			  bool                      CreatePipe(const char* StrPipeName,unsigned char ClientMaxCount);
+			  //创建管道,服务端调用,返回连接个数，小于等于0失败
+			  int                      CreatePipe(const char* StrPipeName,unsigned char ClientMaxCount);
 			  //打开服务器端管道
 			  bool                      OpenServerPipe(const char* StrPipeName);
 			  
@@ -79,6 +79,8 @@ namespace Qy_IPC
 			  IQy_IPC_DisConnect *m_pDisConnect;
               //管道实例数据
 			  std::vector<IQy_Ipc_Base*> m_IPC_Vect;
+			  ///服务端管道
+			  HANDLE                     m_hPipeInstServer;
 			  //线程
 			  HANDLE m_ThreadHandles[2];
 			  HANDLE m_PipeThreadRWExit;
@@ -97,7 +99,8 @@ namespace Qy_IPC
 			  //客户端
 			  SQy_IPC_Context                            m_ClientQy_IPC_Context;
 			  Qy_IPc_InterCriSec                         m_Lock;
-			  bool m_bExit;
+			  Qy_IPc_InterCriSec                         m_ExitLock;
+			  bool                                       m_bExit;
 
 	};
 }

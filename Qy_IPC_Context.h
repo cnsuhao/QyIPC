@@ -1,9 +1,10 @@
+
+#ifndef Qy_IPC_Context_H_
+#define Qy_IPC_Context_H_
 #ifndef NoNeedWindowHeade
 #include <Windows.h>
 #endif
 #include <vector>
-#ifndef Qy_IPC_Context_H_
-#define Qy_IPC_Context_H_
 namespace Qy_IPC
 {
 	#define PipeBufferSize 1024*100

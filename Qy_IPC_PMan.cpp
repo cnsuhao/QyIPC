@@ -7,7 +7,7 @@
 typedef struct SProcessInfo
 {
 	PROCESS_INFORMATION pi;
-	STARTUPINFOA si;
+	STARTUPINFOW si;
 };
 
 bool KillProcessFromName(std::wstring strProcessName)  
@@ -39,7 +39,6 @@ bool KillProcessFromName(std::wstring strProcessName)
 
 		//pe.szExeFile获取当前进程的可执行文件名称  
 		std::wstring scTmp = pe.szExeFile;
-
 
 		//将可执行文件名称所有英文字母修改为小写  
 		 transform(scTmp.begin(), scTmp.end(), scTmp.begin(),  toupper);   
@@ -89,22 +88,17 @@ namespace Qy_IPC
 		delete pInstance;
 		pInstance=NULL;
 	}
-	bool CQy_IPC_PMan::StartApp(std::string &ExeFile, std::string &CmdLine)
+	bool CQy_IPC_PMan::StartApp(std::wstring ExeFile, std::wstring CmdLine)
 	{
-		SProcessInfo *pInfo=(SProcessInfo*)::malloc(sizeof(SProcessInfo));
+		SProcessInfo Info,*pInfo=&Info;
         memset(pInfo,0,sizeof(SProcessInfo));
-		char abcd[256]="";
-        strcpy(abcd,CmdLine.c_str());
-
-		LPSTR szCmdline =_strdup(abcd);
-		BOOL ret = CreateProcessA(ExeFile.c_str(),szCmdline, NULL, NULL, FALSE, 0, NULL, NULL, &pInfo->si, &pInfo->pi);
+		
+		BOOL ret = CreateProcessW(ExeFile.c_str(),(LPWSTR)CmdLine.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &pInfo->si, &pInfo->pi);
 		if (!ret) 
 		{
-			free(pInfo);
+			
 			return false;
 		}
-
-		G_ProcessInfoMap.insert(std::pair<std::string,SProcessInfo*>(ExeFile,pInfo));
 	    return true;
 	}
 	char exchange(char c)
@@ -121,32 +115,6 @@ namespace Qy_IPC
 		return c;
 
 	}
-	BOOL CQy_IPC_PMan::CloseApp(std::string ExeFile)
-	{
-		
-
-		std::map<std::string,SProcessInfo*>::iterator Itx=G_ProcessInfoMap.begin();
-		for(;Itx!=G_ProcessInfoMap.end();++Itx)
-		{
-			std::string abcd=Itx->first;
-			int i=abcd.find_last_of("\\");
-			if(i>-1)
-			{
-				i++;
-				abcd=abcd.substr(i,abcd.length()-i);
-				std::transform(abcd.begin(), abcd.end(), abcd.begin(), ::tolower);
-				std::transform(ExeFile.begin(), ExeFile.end(), ExeFile.begin(), ::tolower);
-				if(abcd==ExeFile)
-				{
-					//CloseHandle(Itx->second->pi.hThread);
-					TerminateProcess(Itx->second->pi.hProcess,0);
-					free(Itx->second);
-					Itx=G_ProcessInfoMap.erase(Itx);
-					break;
-				}
-			}
-		}
-		return TRUE;
-	}
+	
 	CQy_IPC_PMan* CQy_IPC_PMan::pInstance=NULL;
 }
