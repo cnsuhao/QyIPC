@@ -124,7 +124,7 @@ namespace Qy_IPC
 		return;
 	}
 	
-	bool Qy_Ipc_Manage::CreatePipe(const char *PipeName,unsigned char ClientMaxCount)
+	int Qy_Ipc_Manage::CreatePipe(const char *PipeName,unsigned char ClientMaxCount)
 	{
 		bool Ok=true;
 		if(PipeName==NULL)
