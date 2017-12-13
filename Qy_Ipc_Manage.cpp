@@ -4,6 +4,7 @@
 #include "Qy_Ipc_Win.h"
 #include <process.h>
 #include <assert.h>
+#define IPCPrintLog 0
 namespace Qy_IPC
 {
 
@@ -331,6 +332,7 @@ namespace Qy_IPC
 		if(pIpc->dwState==WRITOK_STATE||pIpc->dwState==READING_STATE)
 		{
 			BOOL xx=SetEvent(pIpc->hDataEvent);
+			if(IPCPrintLog)
 			printf("写 %d \n",xx);
 		}
 		m_Lock.Unlock();
@@ -509,6 +511,7 @@ namespace Qy_IPC
 							memcpy(pIpc->SendBuf,pBuf,It->Len);
 							pIpc->cbToWrite=It->Len;
 							WriteFile(pIpc->hPipeInst,pIpc->SendBuf,pIpc->cbToWrite,NULL,&pIpc->oWriteOverlap);
+							if(IPCPrintLog)
 							printf("写数据\n");
 							free(It->pBuf);
 							It->pBuf=NULL;
@@ -615,6 +618,7 @@ namespace Qy_IPC
 						NULL,  
 						&m_ClientQy_IPC_Context.oWriteOverlap);
 					if(fSuccess){
+						if(IPCPrintLog)
 						printf("写数据成功\n");
 					}
 					//if(It-)
@@ -735,9 +739,11 @@ namespace Qy_IPC
 			header.PktGuid.Data4[4],header.PktGuid.Data4[5],header.PktGuid.Data4[6],header.PktGuid.Data4[7]);
 
 #ifdef _DEBUG
+	  if(IPCPrintLog){
 		printf("数据包：%s\n",form);
 		printf("数据包：DataLen=%d\n",header.DataLen);
 		printf("数据包：TotalDataLen=%d\n",header.TotalDataLen);
+	  }
 #endif
 
 					
